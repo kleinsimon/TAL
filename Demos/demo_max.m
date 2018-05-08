@@ -35,6 +35,7 @@ fun = sk_func_tc_properties(Eq, 'dg("fcc","bcc")');
 varValues={'w(C)'};
 
 solver = sk_solver_minimize_value;
+solver.invert = true;
 solver.varComponents=varValues;
 solver.minFunc = fun;
 solver.solvParm = parms;
@@ -49,5 +50,11 @@ mapper.Ranges={...
     [0.05, 0.2, 3],...  %Variate w(cr) from 0.05 to 0.2 in 3 steps
     };
 
+%% Start Mapping and get Result
+
 mapper.doMapping;
 mapper.Result
+
+%% The Same using Properties
+
+Eq.GetProperty('max("dg(""fcc"",""bcc"")","w(cr)","w(c)")')

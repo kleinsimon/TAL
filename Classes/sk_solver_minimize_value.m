@@ -50,12 +50,7 @@ classdef sk_solver_minimize_value < sk_solvers
             else
                 obj.options = optimoptions('fmincon','Display','final','Diagnostics','off','TolX',1e-2,'Algorithm','interior-point','DiffMinChange', 1e-4);
             end
-            
-%             for i=1:length(obj.Components)
-%                 tc_set_condition(obj.Components{i}, Values(i));
-%             end
-%             obj.selfCheck();
-            
+                       
             parm = obj.solvParm.copy();
             
             if obj.invert
@@ -84,14 +79,7 @@ classdef sk_solver_minimize_value < sk_solvers
                 gs = GlobalSearch;
                 [x, fval] = gs.run(problem);
             end
-%             [mainph, content] = sk_tc_find_stable_main_phase();
-%                 cnt = sk_tc_values_in_phase(mainph, 'x');
-%             %
-%             if obj.invert
-%                 res = {x, fval*-1, mainph, content, strjoin(cnt,';')};
-%             else
-%                 res = {x, fval, mainph, content, strjoin(cnt,';')};
-%             end
+
             if obj.invert
                 res = {x, fval*-1};
             else

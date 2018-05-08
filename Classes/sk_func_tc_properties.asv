@@ -210,10 +210,10 @@ classdef sk_func_tc_properties < sk_funcs
 
             
             %% Bedingungen setzen wenn vorhanden und SetBefore==1
-            % t=temperature, c=conditions, p=pressure, n=moles, h=phase
+            %
             setvars = property.SetBefore;
             if setvars == 1
-                setvars = 'tpnch';
+                setvars = 'tpnc';
             elseif ~ischar(setvars)
                 setvars = '';
             end
@@ -237,10 +237,11 @@ classdef sk_func_tc_properties < sk_funcs
                             neweq.SetConditions(io.value);
                         end
                     case 4
-                        if contains(setvars, 'h')
-                            syscond = eq.GetLocalConditions(io.value);
+                        if contains(setvars, 'c')
+                            syscond = eq.GetSystemConditions;
                             neweq.DeleteCondition('*');
                             neweq.SetConditions(syscond);
+                            neweq.SetConditions(io.value);
                         end
                     case 8
                         if contains(setvars, 'p')

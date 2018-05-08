@@ -31,13 +31,16 @@ classdef sk_tc_property_tliq < sk_tc_property
                 iv = s.getSolidificationInterval;
                 tliq = iv.TLiq;
             else
+                %tsol = deps{1}.value;
+                n=eq.GetValue('n');
                 %t = deps{1}.value;
                 %eq.TCSYS.Flush;
-                eq.SetCondition('t', 4000);
+                eq.SetCondition('t', 300);
                 eq.Calculate;
-                eq.TCSYS.Flush;
+                %eq.TCSYS.Flush;
                 eq.DeleteCondition('T');
-                eq.SetPhaseStatus(obj.LiquidName,'fixed',obj.Amount);
+                eq.SetPhaseStatus(obj.LiquidName,'fixed',n*obj.Amount);
+                eq.Calculate;
                 tliq = eq.GetValue('T');
             end
             res = sk_tc_prop_result(obj.zNames, 1, tliq, 'K');

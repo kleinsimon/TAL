@@ -7,7 +7,7 @@ classdef sk_tc_property_tsol < sk_tc_property
 %               raised until MaxT (1250K). 
 %   Result:     AC1 in K
     properties
-        Amount = 1e-12;
+        Amount = 0;
         LiquidName = 'LIQUID';
         Verbose=1;
     end
@@ -31,14 +31,16 @@ classdef sk_tc_property_tsol < sk_tc_property
                 iv = s.getSolidificationInterval;
                 tsol = iv.TSol;
             else
+                %n=eq.GetValue('n');
                 %t=deps{1}.value;
                 
-                eq.TCSYS.Flush;
-                eq.SetCondition('t', 300);
+                %eq.TCSYS.Flush;
+                eq.SetCondition('t', 200);
                 eq.Calculate;
                 
                 eq.DeleteCondition('T');
                 eq.SetPhaseStatus(obj.LiquidName,'fixed',obj.Amount);
+                eq.Calculate;
                 tsol = eq.GetValue('T');
             end
             res = sk_tc_prop_result(obj.zNames, 1, tsol, 'K');
