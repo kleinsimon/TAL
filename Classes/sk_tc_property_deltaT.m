@@ -7,17 +7,11 @@ classdef sk_tc_property_deltaT < sk_tc_property
 %               raised until MaxT (1250K). 
 %   Result:     AC1 in K
     properties
-        StartT = 1100;
-        BigStepT = 200;
-        StepT = 50;
-        MinT=500;
-        MaxT=1250;
-        Tol = 1e-8;
-        Verbose=1;
+
     end
     
     properties (GetAccess=public,SetAccess=private)
-        zNames={'deltaT','alphaName'};
+        zNames={'deltaT'};
         %Names of properties which have to be calculated first
         DependsOn={'tliq'}; 
         SetBefore=1;
@@ -37,7 +31,7 @@ classdef sk_tc_property_deltaT < sk_tc_property
                 i = find(contains(phs, 'BCC', 'IgnoreCase', 1), 1);
                 
                 if isempty(i)
-                    fprintf('! No Delta Ferrite found\n');
+                    warning('! No Delta Ferrite found\n');
                     res=nan;
                     return;
                 end

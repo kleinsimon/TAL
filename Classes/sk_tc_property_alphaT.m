@@ -1,13 +1,13 @@
 classdef sk_tc_property_alphaT < sk_tc_property
-% sk_func_calc_ac1: Child of sk_funcs. Evaluates the ac1 temperature of
-% steels. 
+% sk_func_calc_ac1: Child of sk_funcs. Searches a temperature, where the
+% matrix is ferritic.
 %
 %   StartT:     Starting temperature. This temperature must be above AC1.
-%               Defaults to 1100K. If no major fcc phase is found, t is
-%               raised until MaxT (1250K). 
-%   Result:     AC1 in K
+%               Defaults to 1100K. If no major bcc phase is found, t is
+%               lowered until MinT (500K). 
+
     properties
-        StartT = 1100;
+        StartT = 1100;  %Starting Temperature to find a 
         BigStepT = 200;
         StepT = 50;
         MinT=500;
@@ -32,7 +32,7 @@ classdef sk_tc_property_alphaT < sk_tc_property
             t=deps{1}.value;
             fccName=deps{2}.value;
             try
-                %Search Fcc without Bcc
+                %Search BCC
                 while 1
                     t = t - obj.BigStepT;
 
@@ -41,10 +41,6 @@ classdef sk_tc_property_alphaT < sk_tc_property
 
                         break;
                     end
-
-    %                 if obj.Verbose
-    %                     fprintf('\tSearching FCC --> BCC at T=%d\n', t);
-    %                 end
 
                     eq.SetCondition('T', t);
 

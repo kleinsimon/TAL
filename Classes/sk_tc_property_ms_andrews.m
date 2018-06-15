@@ -30,6 +30,7 @@ classdef sk_tc_property_ms_andrews < sk_tc_property
             ph = deps{1}.value;
 
             EM = eq.GetValue('w(%s,*)',ph);
+            EM(:,1) = eq.GetElements;
 
             wpc=@(elm)(100*sk_tool_def(0,EM{strcmpi(EM(:,1),elm),2}));
             

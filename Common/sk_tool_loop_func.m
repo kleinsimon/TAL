@@ -24,9 +24,7 @@ function result=loopRec(result, values, position, dim, func, progDisp)
         else
             valVec = cellfun(@(v,i) v(i), values, position);
             indx = sub2ind(cellfun(@length, values), position{:});
-            sb = sk_tc_sandbox;
             result{indx} = cellflat([num2cell(valVec), func(valVec)]);
-            sb.Restore;
             progDisp.incShow();
         end
         position{dim}=position{dim}+1;

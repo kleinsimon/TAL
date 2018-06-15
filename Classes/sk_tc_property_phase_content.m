@@ -1,21 +1,27 @@
 classdef sk_tc_property_phase_content < sk_tc_property
-%sk_func_get_main_phase: Child of sk_tc_property, class for evaluating the
-%main phase for a given set of variables. 
-%Result:    cellarray with name and content of the main phase.
+%sk_tc_property_phase_content: Child of sk_tc_property. Class for evaluating the
+%content of a given phase. If no phase is given, all phases are measured.
+%By default, the content is measured using vpv.
+
     properties
-        PhaseComparer='vpv';
-        PhaseName='*';
+        PhaseComparer='vpv'; %The variable to use for measuring. Defaults to "vpv"
+        PhaseName='*';       %The name of the phase to measure. Can be set using the pipe.
     end
     
     properties (GetAccess=public,SetAccess=private)
-        zNames={'Phase_Content'};
+        zNames={'Phase_Content'};   %The Name of this property.
         %Names of properties which have to be calculated first
-        DependsOn={}; 
-        SetBefore=1;
+        DependsOn={};   %Dependencies: None. 
+        SetBefore=1;    %Set Conditions in the pipe before evaluating. =ALL
     end
     
     methods 
         function obj = sk_tc_property_phase_content(pipe)
+            %Phase objects will be taken from the pipe, if available. The
+            %phase comparer may be submitted as a string. If two strings
+            %are received, the first will be taken as a phase and the
+            %second as the comparer.
+            
             ph = sk_tc_prop_result.getByType(pipe, 4);
             ph2 = sk_tc_prop_result.getByType(pipe, 5, {@ischar});
             

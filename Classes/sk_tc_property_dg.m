@@ -1,6 +1,7 @@
 classdef sk_tc_property_dg < sk_tc_property
 % sk_func_calc_deltaG: Child of sk_funcs. Evaluates the Difference
-% of Gibbs enthalpies between two phases.
+% of Gibbs enthalpies between two phases in the local state of the main
+% phase.
 %
 %   phase1:     TC-Name of the first phase (eg. fcc)
 %   phase2:     TC-Name of the second phase (eg. bcc)

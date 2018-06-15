@@ -1,13 +1,8 @@
 classdef sk_tc_property_a4 < sk_tc_property
-% sk_func_calc_ac1: Child of sk_funcs. Evaluates the ac1 temperature of
-% steels. 
-%
-%   StartT:     Starting temperature. This temperature must be above AC1.
-%               Defaults to 1100K. If no major fcc phase is found, t is
-%               raised until MaxT (1250K). 
-%   Result:     AC1 in K
+% sk_tc_property_a4: Child of sk_funcs. Evaluates the a4 temperature of
+% steels (Austenite->Delta Ferrite). NOT STABLE!
+
     properties
-        Verbose=0;
     end
     
     properties (GetAccess=public,SetAccess=private)

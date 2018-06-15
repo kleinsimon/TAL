@@ -41,6 +41,7 @@ classdef sk_tc_property_md30 < sk_tc_property
             ph = deps{1}.value;
             
             EM = eq.GetValue('w(%s,*)',ph);
+            EM(:,1) = eq.GetElements;
             
             [~,~,i1,i2] = sk_tool_cellintersect(EM(:,1), obj.Coeff(:,1));
             m1=cell2mat(EM(i1,2));

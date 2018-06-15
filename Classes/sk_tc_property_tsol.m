@@ -7,7 +7,7 @@ classdef sk_tc_property_tsol < sk_tc_property
 %               raised until MaxT (1250K). 
 %   Result:     AC1 in K
     properties
-        Amount = 0;
+        Amount = 1e-12;
         LiquidName = 'LIQUID';
         Verbose=1;
     end
@@ -35,7 +35,7 @@ classdef sk_tc_property_tsol < sk_tc_property
                 %t=deps{1}.value;
                 
                 %eq.TCSYS.Flush;
-                eq.SetCondition('t', 200);
+                eq.SetCondition('t', 500);
                 eq.Calculate;
                 
                 eq.DeleteCondition('T');

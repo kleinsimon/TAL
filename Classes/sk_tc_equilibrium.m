@@ -1,46 +1,48 @@
 classdef sk_tc_equilibrium <handle
 %sk_tc_equilibrium represents a Thermo-Calc Equilibrium and acts a
 %a wrapper function for thermocalc subsystem (tc_*).   
+
     properties%(Access = private)
+        PhaseStabilityTolerance=1e-12;
+    end
+    
+    properties(SetAccess = private,GetAccess = public)
+        TCSYS;
+        NeedRecalc=0;
+        ForceFlush=0;
         Conditions = cell(0,2);
         PhaseStati = cell(0,3);
         Minimization = 1;
-        TCSYS;
-        PhaseStabilityTolerance=1e-12;
-        KeepState=0;
     end
-    properties(SetAccess = private,GetAccess = public)
-        BindID=0;
-        NeedRecalc=0;
-        ForceFlush=0;
-    end
+    
     properties(Access = private)
-        LastCalc;
-        Elements;
     end    
+    
     methods
         function obj = sk_tc_equilibrium(TCSYS)
-        %obj = sk_tc_equilibrium(tcsys) creates new object using the given
-        %TCSYS
+        %obj = sk_tc_equilibrium(tcsys) creates new object using the given sk_tc_system object
 
             validateattributes(TCSYS, {'sk_tc_system'}, {'nonempty'});
 
             obj.TCSYS = TCSYS;
-            obj.Elements=TCSYS.Elements;
-            %obj.Phases=TCSYS.Phases;
         end
         
         function newobj = Clone(obj)
-        %Clone() Clones the equilibrium to a new object
+        %Clones the equilibrium to a new object
         
             newobj = obj.TCSYS.GetNewEquilibrium;
             obj.CopyTo(newobj);
         end
+        
         function eq = isequal(obj, oobj)
+            %Checks wether the given EQ is equal to the current one
+            %regarding conditions, phase stati and minimization
+            
             eq = all([isequal(obj.GetConditions,oobj.GetConditions), isequal(obj.GetPhaseStatus,oobj.GetPhaseStatus), obj.Minimization==oobj.Minimization]);
         end
+        
         function CopyTo(obj, otherObj)
-        %Clone() Copies Conditions to other Eq Object
+        %Clone() Copies this state to another Eq Object
         
             validateattributes(otherObj,{'sk_tc_equilibrium'},{'nonempty'});
             
@@ -48,8 +50,9 @@ classdef sk_tc_equilibrium <handle
             otherObj.SetPhaseStati(obj.GetPhaseStatus);
             otherObj.Minimization=obj.Minimization;
         end
+        
         function CopyFrom(obj, otherObj)
-        %Clone() Copies Conditions to other Eq Object
+        %Clone() Copies state from another Eq Object
 
             validateattributes(otherObj,{'sk_tc_equilibrium'},{'nonempty'});
             
@@ -59,7 +62,10 @@ classdef sk_tc_equilibrium <handle
             obj.SetPhaseStati(otherObj.GetPhaseStatus);
             obj.Minimization=otherObj.Minimization;
         end
+        
         function ExportJSON(obj, path)
+            %Export this state to json file
+            
             fid = fopen(path, 'w');
             tmp = struct;
             tmp.Conditions = obj.Conditions;
@@ -69,25 +75,42 @@ classdef sk_tc_equilibrium <handle
             fprintf(fid, '%s', jsonencode(tmp));
             fclose(fid);
         end
+        
         function ImportJSON(obj, path)
+            %import from json file
+            
             txt = fileread(path);
             tmp = jsondecode(txt);
             obj.Conditions = tmp.Conditions;
             obj.PhaseStati = tmp.PhaseStati;
             obj.Minimization = tmp.Min;
         end
-        function obj = ImportCSV(obj, path)
+        
+        function obj = ImportCSV(obj, path, BaseElement)
+            %import from CSV with the weight percent for each element in
+            %one column and containing only one data row and a header row
+            %with the elements.
+            %ie:
+            %
+            
             T = readtable(path);
             
-            obj.ImportTable(T);
+            obj.ImportTable(T, BaseElement);
         end
-        function obj = ImportTable(obj, T)
+        
+        function obj = ImportTable(obj, T, BaseElement)
+            %import from table with the weight percent for each element in
+            %one column and containing only one row. The column names must
+            %be the element names.
+            %
+            %eq = ImportTable(T, BaseElement)
+            
             elm = T.Properties.VariableNames;
             elm = upper(elm);
             cnts = table2array(T(1,:));
             
             syselm = obj.TCSYS.Elements;
-            syselm(ismember(syselm, obj.GetBaseElement)) = [];
+            syselm(ismember(syselm, BaseElement)) = [];
             
             [elm2, i2] = setdiff(elm, syselm);
             [elm3, ~] = setdiff(syselm, elm);
@@ -103,7 +126,10 @@ classdef sk_tc_equilibrium <handle
             
             obj.SetConditionsForComponents(elm', cnts'/100, 'w');
         end
+        
         function thumb = GetThumb(obj, varargin)
+        %Create a hash for the current state. 
+        
             if ~isempty(varargin)
                 ignoreCond = varargin{1};
                 c = sk_tool_delcellrowbyid(obj.Conditions, ignoreCond);
@@ -112,7 +138,11 @@ classdef sk_tc_equilibrium <handle
                 thumb = DataHash({obj.Conditions obj.PhaseStati obj.Minimization});
             end
         end
+        
         function eq = isEqualTo(obj, state, varargin)
+        %Check if is equal to eq, ignoring some optionally given conditions
+        % equal = isEqualTo(eq, [excludeConds])
+            
             if ~isempty(varargin)
                 ignoreCond = varargin{1};
                 c1=obj.Conditions;
@@ -130,43 +160,23 @@ classdef sk_tc_equilibrium <handle
             eq = eq1 && eq2;
         end
         
-        function BindToID(obj, id)
-            obj.BindID=id;
-        end
-        
         function Load(obj)
-        %Activates and reloads the Equilibrium
+        %Activates and reloads the Equilibrium. Same as ApplyState(true)
         
             obj.ApplyState(1);
         end
+        
         function Calculate(obj)
         %Recalculates the Equilibrium
         
             obj.Recalc(0);
         end
-%         function StartSandbox(obj)
-%         %Stores the current state and reapplies it when the sandbox is
-%         %ended. More than one Sandbox can be started.
-%         
-%             obj.StateCount = 1+obj.StateCount;
-%             obj.tmpState{obj.StateCount} = obj.activeState;
-%             obj.activeState = obj.activeState.Clone;
-%         end
-%         function EndSandbox(obj)
-%         %Ends the last Sandbox and reapplies the former state
-%         
-%             if obj.StateCount < 1
-%                 error('Sandbox not started.')
-%             end
-%             obj.SetState(obj.tmpState{obj.StateCount});
-%             obj.tmpState{obj.StateCount}=[];
-%             obj.StateCount = obj.StateCount - 1;
-%         end
+
         %%
         function SetCondition(obj, Pattern, varargin)
-        %SetCondition(Pattern, Vars..., Content)
         %Sets a Condition with a formated string (sprintf syntax). The last
         %parameter represents the value to be set.
+        %SetCondition(Pattern, Vars..., Content)
         
             validateattributes(Pattern,{'char'},{'nonempty'});
             
@@ -208,18 +218,17 @@ classdef sk_tc_equilibrium <handle
         end
         
         function GetValueSetCondition(obj, Pattern, varargin) 
-        %GetValueSetCondition(Patter, Vars...)
         %Gets a value and sets it as a condition
+        %GetValueSetCondition(Patter, Vars...)
         
             obj.SetCondition(Pattern, varargin{:}, obj.GetValue(Pattern, varargin{:}));
         end
         
         function SetPhaseStatus(obj, Phase, Status, Value)
-        %SetPhaseStatus(Phase)      Sets the Status of Phase to Entered.
-        %                           Phase can also be a cellarray.
+        %Sets the Status of the phases to the
+        %given Status and Amount (eg 'fixed', 1)
         %SetPhaseStatus(Phase, Status, Amount)
-        %                           Sets the Status of the phases to the
-        %                           given Status and Amount (eg 'fixed', 1)
+        
             if strcmp(Phase, '*')
                 obj.SetPhaseStati(obj.TCSYS.Phases, Status, Value);
                 return;
@@ -229,6 +238,7 @@ classdef sk_tc_equilibrium <handle
             obj.PhaseStati=sk_tool_addtocellunique(obj.PhaseStati, {Phase, upper(Status), Value});
         end
         function SetPhaseStati(obj, varargin)
+            %Set multiple phase stati.
             %SetPhaseStati(obj, Cellarray) Sets Phase Stati from nx3 Cellarray
             %SetPhaseStati(obj, Cell, Status, Value) Sets the status of all Phases in Cell to the given Status
             
@@ -250,7 +260,7 @@ classdef sk_tc_equilibrium <handle
             end
         end
         function SetState(obj, Status)
-        %SetState(State)    Sets the active State to the given Status
+        %Deprecated. Sets the active State to the given Status
         
             if ~isa(Status, 'sk_tc_equilibrium')
                 warning('Status not set, wrong type');
@@ -261,8 +271,9 @@ classdef sk_tc_equilibrium <handle
             %obj.NeedRecalc = 1;
         end
         function SetMinimization(obj, state)
-        %SetMinimization(min)   Changes the Global Minimization status
-        %                       Valid Values are 1 0 on off
+        %Changes the Global Minimization status
+        %Valid Values are 1 0 on off
+        
             if ischar(state)
                 state = lower(state);
             end
@@ -280,10 +291,10 @@ classdef sk_tc_equilibrium <handle
         end
         %%
         function SetWpc(obj, varargin)
+        % Sets the Content of Element to the given Weight%
         % SetWpc(Element, Weight%)
         % SetWpc(M) Where M is a nx2 Cellarray with Elements in the first and
         % contents in the second column
-        % Sets the Content of Element to the given Weight%
         
             [Elm, wpc] = sk_tool_parse_varargin(varargin, [],[]);
             de = obj.GetElements;
@@ -306,30 +317,37 @@ classdef sk_tc_equilibrium <handle
                 error('Wrong arguments');
             end
         end
+        
         function SetDegree(obj, T)
-        %SetDegree(T)   sets Temperature to T in Celsius
+        %Sets Temperature to T in Celsius
                 
             obj.SetCondition('T', T+273.15);
         end
+        
         function SetCelsius(obj, T)
+        %Sets Temperature to T in Celsius
             obj.SetDegree(T);
         end
+        
         function SetDefaultConditions(obj)
-        %SetDefaultConditions()     Sets a standard Environment 
-        %                           T=1000°C, n=1, p=101325
+        %Sets a standard Environment. T=1000°C, n=1, p=101325
         
             obj.SetCondition('T', 1273.15);
             obj.SetCondition('n', 1);
             obj.SetCondition('p', 101325);
         end
-        function SetCondsToZero(obj, BaseElement)
-            e=obj.GetVarElements(BaseElement);
+        
+        function SetCondsToZero(obj)
+            %Sets the content of all independend elements to 0
+            
+            e=obj.GetVarElements(obj.GetBaseElement);
             z=zeros(length(e), 1);
             obj.SetConditionsForComponents(e, z , 'w');
         end
+        
         function SetConditions(obj, Cell, varargin) 
-        %SetConditions(input, [forceBaseElement]) Sets Conditions from a Cell array nx2, with
-        %Conditions in the fist and values in the second column
+        %Sets Conditions from a Cell array nx2, with Conditions in the fist and values in the second column
+        %SetConditions(input, [forceBaseElement]) 
 
             forceBE = sk_tool_parse_varargin(varargin, false);
         
@@ -360,7 +378,7 @@ classdef sk_tc_equilibrium <handle
             end
         end
         function SetConditionsForComponents(obj, components, values, defaultParm)
-        % Set Conditions for set of species
+        % Set Conditions for set of components
         %   component:    component like {'w(c)', t} or elements, see defaultparm
         %   values:       values to set, array
         %   defaultparm:  Parameter to add if only elements are given in component
@@ -394,10 +412,12 @@ classdef sk_tc_equilibrium <handle
         
             obj.SetMinimization(state);
         end
+        
         function DeleteCondition(obj, cond, varargin) 
-        %DeleteCondition(cond)      Deletes one or more condition.
-        %DeleteCondition(condPattern, var1, var2)   Parses the Format like sprintf
-        %To delete all Conditions, '*' can be given.
+        %Deletes one or more condition.
+        %DeleteCondition(cond) Delete one or more conditons if its a cellarray.
+        %DeleteCondition(condPattern, var1, var2, ...)   Parses the Format like sprintf
+        %DeleteCondition('*') Delete all conditions
                 
             if iscell(cond)
                 for i=1:numel(cond)
@@ -417,8 +437,9 @@ classdef sk_tc_equilibrium <handle
                 obj.Conditions=sk_tool_delcellrowbyid(obj.Conditions, c);
             end
         end
+        
         function DeletePhaseStatus(obj, phname) 
-        %DeletePhaseStatus(Phase)      Deletes one or more condition. To
+        %Deletes one or more phase stati if its a cellarray.
         %To delete all Phase Stati, '*' can be given.
                 
             if iscell(phname)
@@ -435,19 +456,19 @@ classdef sk_tc_equilibrium <handle
                 obj.PhaseStati=sk_tool_delcellrowbyid(obj.PhaseStati, c);
             end
         end
+        
         function ApplyLocalComposition(obj, Phase)
-        %ApplyLocalComposition(Phase)
         %Sets the State to match the composition of the given phase
+        %ApplyLocalComposition(Phase)
             
             state = obj.GetLocalState(Phase);
             obj.CopyFrom(state);
         end
         %%
         function varargout = GetMainElementInPhase(obj, phase, varargin)
+        % Finds the main element of a phase. Operator defaults to 'w'.
         % [element] = GetMainElementInPhase(obj, phase [, operator=w])
         % [element, content] = GetMainElementInPhase(obj, phase [, operator=w])
-        
-        % Finds the main element of a phase. Operator defaults to 'w'.
         
             op = sk_tool_parse_varargin(varargin, 'w');
         
@@ -460,24 +481,23 @@ classdef sk_tc_equilibrium <handle
             end
         end
         function minState = GetMinimization(obj)
-        %GetMinimization()      Returns the Minimization mode
+        %Returns the Minimization mode
             
             minState = obj.Minimization;
         end
+        
         function minState = GetMin(obj)
+        %Returns the Minimization mode
+        
             minState = obj.GetMinimization;
-        end
-        function state = GetState(obj)
-        %GetState() returns the active sk_tc_state
-            
-            state = obj.Clone;
         end
         
         function tcsys = GetTCSystem(obj)
-        %GetTCSystem()  Returns the sk_tc_system
+        %Returns the sk_tc_system
             
             tcsys = obj.TCSYS;
         end
+        
         function phases = GetPhases(obj, varargin)
             %GetPhases()         Returns all Phases
             %GetPhases(Status)   Returns Phases matching the given State
@@ -495,35 +515,41 @@ classdef sk_tc_equilibrium <handle
             stats=stats(ismember(stats(:,2), upper(Status)),:);
             phases = stats(:,1);
         end
+        
         function Phases = GetStablePhases(obj)
         %GetStablePhases    Returns all Phases with an amount > 0
             
             phlist = obj.GetPhases;
+            cont = zeros(size(phlist));
             num=numel(phlist);
-            Phases = {};
+
             for n=1:num
                 ph = phlist{n};
-                cont=obj.GetValue('vpv(%s)', ph);
-                if (cont > obj.PhaseStabilityTolerance )
-                    Phases = [Phases, {ph}];
-                end
+                cont(n)=obj.GetValue('vpv(%s)', phlist{n});
             end
+            Phases = phlist(cont>=obj.PhaseStabilityTolerance);
         end
+        
         function elem = GetComponents(obj)
+        %Returns all Elements in the System. Same as GetElements.
+        
             elem=obj.GetElements;
         end
+        
         function elem = GetElements(obj)
-        %GetElements        Returns all Elements in the System
+        %Returns all Elements in the System
             
-            elem=obj.Elements;
+            elem=obj.TCSYS.Elements;
         end
+        
         function elem = GetVarElements(obj, varargin)
-        %Returns all Elements Except the Base Element
+        %Returns all elements except the base element or a given optional Element
             
             [be] = sk_tool_parse_varargin(varargin, @obj.GetBaseElement);
             elem=obj.GetElements;
             elem(strcmpi(elem, be()))=[];
         end
+        
         function sysconds = GetSystemConditions(obj) 
         %GetSystemConditions    Returns all Conditions not matching an
         %                       Element (N, P, T)
@@ -537,9 +563,10 @@ classdef sk_tc_equilibrium <handle
                 end
             end
         end
+        
         function varargout = GetValuesInPhase(obj, Phase, Var, varargin)
-        %GetValuesInPhase(Phase, Var, FilterElem)
         %Gets Variable of all Components in the given Phase, sorted descending by content.
+        %GetValuesInPhase(Phase, Var, FilterElem)
                         
             [felem] = sk_tool_parse_varargin(varargin, []);
             
@@ -565,6 +592,7 @@ classdef sk_tc_equilibrium <handle
                 varargout{2}=vals(I);
             end
         end
+        
         function phstat = GetPhaseStatus(obj, varargin)
         %cellarray = GetPhaseStatus()       Gets the Status of all Phases
         %cellarray = GetPhaseStatus(Phase)  Gets the Status of a Phase 
@@ -579,7 +607,9 @@ classdef sk_tc_equilibrium <handle
             end
             phstat = sortrows(phstat);
         end
+        
         function [conds, Phase] = GetLocalConditions(obj, varargin)
+        %Returns the local conditions of a phase.
         %GetLocalConditions(Phase)          Get Conditions in a Phase
         %GetLocalConditions(Phase, Operator)          Get Conditions in a Phase
         %GetLocalConditions(Phase, Operator, baseElement)          Get Conditions in a Phase
@@ -599,7 +629,9 @@ classdef sk_tc_equilibrium <handle
             glob = obj.GetSystemConditions;
             conds = [conds; glob];
         end
+        
         function state = GetLocalState(obj, varargin) 
+            %Returns the local state of a phase.
             %GetLocalState()                Gets State of Main Phase
             %GetLocalState(Phase)           Gets State of a Phase
             %GetLocalState(Phase, Operator) Gets State of a Phase with a given Operator            
@@ -612,9 +644,8 @@ classdef sk_tc_equilibrium <handle
                 state.SetCondition(conds{i,1}, conds{i,2});
             end
             state.SetCondition('n', obj.GetValue('np(%s)', phase));
-            %state.SetPhaseStatus('*','SUSPENDED',0);
-            %state.SetPhaseStatus(phase, 'ENTERED', 1);
         end
+        
         function partEQs = GetPartialEquilibrium(obj, varargin)
             %GetPartialEquilibrium()           Gets Partial Equilibrium of
             %                                  all stable Phases
@@ -652,38 +683,44 @@ classdef sk_tc_equilibrium <handle
         end
         function belm = GetBaseElement(obj)
         %GetBaseElement     Returns the Base element, which has no conditions
-            belm = obj.TCSYS.BaseElement;
-%             cmp = obj.GetElements;
-%             nc=length(cmp);
-%             cond = obj.GetConditions;
-%             nco=length(cond);
-%             belm=[];
-%             matches=0;
-% 
-%             for ci=1:nc
-%                 found = false;
-%                 for con=1:nco
-%                     if ~isempty(regexpi(cond{con}, ['^[a-z]+\(' cmp{ci} '\)']))
-%                         found = true;
-%                         break;
-%                     end
-%                 end
-% 
-%                 if ~found
-%                     belm=cmp{ci};
-%                     matches = matches + 1;
-%                 end
-%             end
-% 
-%             if matches~=1
-%                 error('%i elements are not defined... base element could not be identified', matches);
-%             end
+            if ~isempty(obj.TCSYS.BaseElement)
+                belm = obj.TCSYS.BaseElement;
+                return;
+            end
+
+            cmp = obj.GetElements;
+            nc=length(cmp);
+            cond = obj.GetConditions;
+            nco=length(cond);
+            belm=[];
+            matches=0;
+
+            for ci=1:nc
+                found = false;
+                for con=1:nco
+                    if ~isempty(regexpi(cond{con}, ['^[a-z]+\(' cmp{ci} '\)']))
+                        found = true;
+                        break;
+                    end
+                end
+
+                if ~found
+                    belm=cmp{ci};
+                    matches = matches + 1;
+                end
+            end
+
+            if matches~=1
+                error('%i elements are not defined... base element could not be identified', matches);
+            end
         end
+        
         function [varargout] = GetMainPhase(obj, varargin) 
-%GetMainPhase()                         Gets the Main Phase using vpv
-%GetMainPhase(Operator)                 Gets the Main Phase using operator
-%GetMainPhase(Operator,AllowedPhases)   Gets the Main Phase using operator
-%                                       and the given Whitelist of Phases
+            %Searches the main phase of the system. 
+            %GetMainPhase()                         Gets the Main Phase using vpv
+            %GetMainPhase(Operator)                 Gets the Main Phase using operator
+            %GetMainPhase(Operator,AllowedPhases)   Gets the Main Phase using operator
+            %                                       and the given Whitelist of Phases
             
             [operator, allowed] = sk_tool_parse_varargin(varargin, 'vpv', {});
 
@@ -721,7 +758,9 @@ classdef sk_tc_equilibrium <handle
 
             varargout = sk_tool_mkvarargout(nargout, maxid, maxval);
         end
+        
         function varargout = GetValue(obj, Pattern, varargin )
+%Queries one or more values of the system.
 %GetValue(Query)                 Passes the Query to TC and returns the Value
 %                                If Query is a Cellarray, a Cellarray with
 %                                the same size as query is returned. The
@@ -801,26 +840,25 @@ classdef sk_tc_equilibrium <handle
         end
         
         function res = GetValuesInRange(obj, VarCond, Range, Pattern, varargin)
-        %res = GetValuesInRange(VarCond, Range, Pattern, varargin)
-        %Variates condition VarCond in Range and returns the Value given by
-        %Pattern
+        %Variates condition VarCond in Range and returns the Value given by Pattern
+        %res = GetValuesInRange(VarCond, Range, Pattern, var1, var2, ...)
         
             n=numel(Range);
             res=nan(n,2);
             res(:,1)=Range;
             
-            oldState = obj.GetState;
+            tmpState = obj.Clone;
             
             for i=1:n
-                obj.SetCondition(VarCond, Range(i));
-                res(i,2) = obj.GetValue(Pattern, varargin{:});
+                tmpState.SetCondition(VarCond, Range(i));
+                res(i,2) = tmpState.GetValue(Pattern, varargin{:});
             end
-            
-            obj.SetState(oldState);
         end
             
         function conds = GetConditions(obj, varargin)
         %GetConditions      Returns all Conditions in the current state
+        %GetConditions(C)      Returns the value of the given condition
+        
             [c] = sk_tool_parse_varargin(varargin, '*');
             
             if strcmp(c,'*')
@@ -830,11 +868,15 @@ classdef sk_tc_equilibrium <handle
             end
             conds = sortrows(conds);
         end
+        
         function r = GetProperty(obj, expr)
+        %Calculates a property of using sk_func_tc_properties. 
+        
             a = sk_func_tc_properties(obj, expr);
             
             r=a.calculate;
         end
+        
         function dof = GetDegreeOfFreedom(obj)
         %Returns the Degree of Freedom in the current State
 
@@ -846,6 +888,7 @@ classdef sk_tc_equilibrium <handle
             
             dof = ne + 3 - 1 - np - nc;
         end
+        
         function [ res ] = GetValueSum( obj, elements, var )
         %GetValueSum(elements, modifier) Gets contents of given set of elements
             
@@ -853,6 +896,7 @@ classdef sk_tc_equilibrium <handle
 
             res = sum(cell2mat(cnt));
         end
+        
         function cnt = GetBaseElementContent(obj, varargin) 
             %GetBaseElementContent(Modifier)  Gets the Content of base
             %element. Modifier defaults to 'w'
@@ -865,8 +909,7 @@ classdef sk_tc_equilibrium <handle
         
         %%
         function DeleteConditionsForElements(obj, elements )
-%DeleteConditionsForElements(elements)  Deletes all Conditions touching the
-%given Elements
+        %Deletes all Conditions touching the given Elements
 
             if ~iscell(elements)
                 elements={elements};
@@ -906,6 +949,7 @@ classdef sk_tc_equilibrium <handle
                 obj.SetCondition('%s(%s)', param, c, cont{i});
             end
         end
+        
         function Clear(obj)
 %Clears the current State, deleting all Conditions and Phase Stati
             
@@ -916,6 +960,8 @@ classdef sk_tc_equilibrium <handle
         
         %%
         function DisplayState(obj)
+%Prints the current State 
+           
             c=obj.Conditions';
             fprintf('---------------\n');
             fprintf('Global Minimization: %d\n', obj.Minimization);
@@ -931,7 +977,9 @@ classdef sk_tc_equilibrium <handle
                 fprintf('% 10s = % 7s(%g)\n', pk{i,1}, pk{i,2}, pk{i,3});
             end           
         end
-        function DisplayEquilibrium(obj, varargin) 
+        
+        function DisplayEquilibrium(obj, varargin)
+%Prints out the current equilibrium
 %DisplayEquilibrium() Defaults to vpv and w
 %DisplayEquilibrium(phasemod, elementmod) 
 %
@@ -969,7 +1017,9 @@ classdef sk_tc_equilibrium <handle
             end
             obj.checkError;
         end
+        
         function DisplayPhaseContents(obj, phName, phmod)
+        %Print the content of a phase
         %DisplayPhaseContents(phName, mod)
         
             elmList = obj.GetElements;
@@ -1000,6 +1050,8 @@ classdef sk_tc_equilibrium <handle
         %%
         
         function PN = ParsePhaseName(obj, phname) 
+        %Parses the given string to a valid phase identifier
+        
             if iscell(phname)
                 PN = cellfun(@(c)(obj.ParsePhaseName(c)), phname, 'UniformOutput', false);
                 return;

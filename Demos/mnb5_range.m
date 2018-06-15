@@ -1,5 +1,5 @@
 tcsys = sk_tc_system;
-tcsys.Database='TCFE6';
+tcsys.Database='TCFE9';
 tcsys.Elements='cr fe c mn al ti b cu mo si ni';
 tcsys.RejPhases='*';
 tcsys.ResPhases='fcc bcc m23 cem';
@@ -26,10 +26,10 @@ initEq.SetWpc('b', 0.005);
 
 
 ac3=sk_func_tc_properties(initEq);
-ac3.Properties={'t_c(ac3)'};
+ac3.Properties={'ac3'};
 
 ms=sk_func_tc_properties(initEq);
-ms.Properties={'t_c(ms_barbier(ac3+50))'};
+ms.Properties={'ms_barbier(ac3+50)'};
 
 
 extr=sk_range_extremes;

@@ -1,13 +1,23 @@
 classdef sk_func_tc_properties < sk_funcs
-% sk_func_calc_ac1: Child of sk_funcs. Evaluates the ac1 temperature of
+%Calculates derived properties given as a set of expressions using the
+%sk_tc_property_* classes
+%
+%The expressions can be constructed of standard matlab expressions and
+%functions, which are generated from the property classes. EG.:
+%sqrt(md30).
+%
+%Parameters can be given, either as a string, or as another expression.
+%Additonally, some named parameters are available: n, p, t, t_c
+%md30(t_c=1200, p=1e5)
+%pren(phase="bcc",t=1400)
 
     properties
-        zNames={''};
-        BaseEq=[];
-        Properties;
-        Objects;
-        ClearCache=0;
-        Celsius=0;
+        BaseEq=[];      %The equilibrium on which to operate
+        zNames={''};    %The header names of the calculated data columns
+        Properties;     %One or more expressions which define the properties
+        Objects;        %A set of initialized solvers from type sk_tc_property_*. There, advanced parameters can be set. If not given, empty objects will be created.
+        ClearCache=0;   %Clear the cache after calculation
+        Celsius=0;      %Return everything in celsius instead of kelvin
     end
     
     properties (Access=private)
@@ -20,6 +30,9 @@ classdef sk_func_tc_properties < sk_funcs
     
     methods 
         function obj = sk_func_tc_properties(eq, varargin)
+            %Constructor. sk_func_tc_properties(EQ, [props]). 
+            %EQ is mandatory. Props may be a set of property expressions.
+            
             obj.BaseEq=eq;
             if ~isa(obj.BaseEq, 'sk_tc_equilibrium')
                 error('Must set BaseEQ first');
@@ -49,50 +62,31 @@ classdef sk_func_tc_properties < sk_funcs
         end
        
         function flush(obj)
+        %Clear the cache.
             obj.CalcProp=cell(0,1);
             obj.CalcVals=cell(0,1);
         end
         
         function r = getExpression(obj, eq, exp)
-            
-%             if isscalar(exp)
-%                 r=exp;
-%                 return;
-%             end
-            
-%             groups = sk_tool_getAllBracedGroups(exp);
-%             groups = sk_tool_sortbylength(groups);
-%             ng = numel(groups);
-%             grouphashs = strcat(repmat({'ghash'}, ng, 1), sk_tool_csprintf('%.3d', 1:ng));
-%             varnames = strcat(repmat({'vars.'}, ng, 1), grouphashs);
-%             
-%             for gi=1:ng
-%                 if ~isfield(obj.RuntimeVars, (grouphashs{gi}))
-%                     group = groups{gi};
-% 
-%                     groupres = obj.ParseExpression(eq, group);
-%                     obj.RuntimeVars.(grouphashs{gi})=groupres;
-%                 end
-%                 rdy = groups(1:gi);
-%                 exp = sk_tool_replaceall(exp, rdy, varnames);
-%                 groups = cellfun(@(s)(strrep(s, groups{gi}, varnames{gi})), groups, 'UniformOutput', 0);
-%             end
-            
-
-                        
+        %Deprecated. use ParseExpression                     
             r = obj.ParseExpression(eq, exp);
         end
         
         function r = ListProperties(obj)
+        %List all available solvers
+        
             r = obj.PropSolvers;
         end
         
         function res = calculate(obj, varargin )
+            %Calculate the properties.
+            %If vars and values are given, these are set as conditions
+            %before execution (for mapper).
+            %calculate([vars, values])
             
             [vars, values] = sk_tool_parse_varargin(varargin, {},[]);
             
-            %Reset cached results
-            
+            %Reset cached results if wanted            
             if obj.ClearCache
                 obj.flush;
             end
@@ -101,7 +95,6 @@ classdef sk_func_tc_properties < sk_funcs
             eq=obj.BaseEq.Clone;
             eq.SetConditionsForComponents(vars, values);
            
-            
             res = cell(1,0);
             %Calculate all Properties
             n=numel(obj.Properties);
@@ -227,7 +220,11 @@ classdef sk_func_tc_properties < sk_funcs
                 switch io.type
                     case 1
                         if contains(setvars, 't')
-                            neweq.SetCondition('t', io.value);
+                            if strcmpi(io.unit, 'K')
+                                neweq.SetCondition('t', io.value);
+                            elseif strcmpi(io.unit, 'C')
+                                neweq.SetCondition('t', io.value+273.15);
+                            end
                         end
                     case 2
                         if contains(setvars, 'c')
@@ -342,6 +339,11 @@ classdef sk_func_tc_properties < sk_funcs
 
     methods (Static)
         function res = get(TCEQ, Properties, varargin)
+            %get the properties of a given equilibrium.
+            %get(EQ, Properties, [Objects])
+            %Objects can be a set of initialized solvers to set advanced
+            %options for them
+            
             [objects] = sk_tool_parse_varargin(varargin, {});
             if ~iscell(objects)
                 objects = {objects};

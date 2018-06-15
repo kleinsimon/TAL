@@ -1,15 +1,7 @@
 classdef sk_tc_property_pren < sk_tc_property
-% sk_func_calc_ac1: Child of sk_funcs. Evaluates the ac1 temperature of
-% steels. 
+% sk_tc_property_pren: Child of sk_funcs. Evaluates the PREN number of the main-phase or a given phase. 
 %
-%   StartT:     Starting temperature. This temperature must be above AC1.
-%               Defaults to 1100K. If no major fcc phase is found, t is
-%               raised until MaxT (1250K). 
-%   Result:     AC1 in K
-%   Model:              Model(s) to use.    1: Steven and Haynes
-%                                           2: Andrews
-%                                           3: Barbier
-%                                           4: Rowland
+
     properties
 
     end
@@ -19,15 +11,34 @@ classdef sk_tc_property_pren < sk_tc_property
         %Names of properties which have to be calculated first
         DependsOn={'mainphase'}; 
         SetBefore=1;
+        Phase=[];
     end
     
     methods 
-        function obj = sk_tc_property_pren(~)
-            
+                
+        function d = get.DependsOn(obj)
+            if isempty(obj.Phase)
+                d = {'mainphase'};
+            else
+                d = {};
+            end
         end
+        
+        function obj = sk_tc_property_pren(varargin)
+            tmp = sk_tc_prop_result.getByType(varargin, 4);
+            
+            if numel(tmp)>0
+                obj.Phase = tmp{1}.tostring;
+            end
+        end
+        
         function res = calculate(obj, ~, eq, deps)
-
-            ph = deps{1}.value;
+            
+            if numel(deps)>=1
+                ph = deps{1}.value;
+            else
+                ph = obj.Phase;
+            end
 
             EM = eq.GetValue('w(%s,*)',ph);
 
