@@ -471,13 +471,15 @@ classdef sk_tc_equilibrium <handle
         % [element, content] = GetMainElementInPhase(obj, phase [, operator=w])
         
             op = sk_tool_parse_varargin(varargin, 'w');
-        
-            cnt = obj.GetValue('%s(%s,*)', op, phase);
-            [~,i]=max(cell2mat(cnt(:,2)));
             
-            varargout{1} = cnt{i,1};
+            el = obj.GetElements;
+            cnt = cellfun(@(e)(obj.GetValue('%s(%s,%s)', op, phase, e)), el);
+        
+            [~,i]=max(cnt);
+            
+            varargout{1} = el{i};
             if nargout >= 2
-                varargout{2} = cnt{i,2};
+                varargout{2} = cnt(i);
             end
         end
         function minState = GetMinimization(obj)

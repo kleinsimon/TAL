@@ -18,6 +18,7 @@ classdef sk_func_tc_properties < sk_funcs
         Objects;        %A set of initialized solvers from type sk_tc_property_*. There, advanced parameters can be set. If not given, empty objects will be created.
         ClearCache=0;   %Clear the cache after calculation
         Celsius=0;      %Return everything in celsius instead of kelvin
+        Silent=0;
     end
     
     properties (Access=private)
@@ -109,7 +110,9 @@ classdef sk_func_tc_properties < sk_funcs
             if numel(res)==1
                 res = res{1};
             end
-            fprintf('----\n');
+            if ~obj.Silent
+                fprintf('----\n');
+            end
         end
     end
     
@@ -300,12 +303,14 @@ classdef sk_func_tc_properties < sk_funcs
                 s = sprintf('\t%s', propertyName);
             end
             
-            fprintf(sk_tool_padstr(s, 35));
-            
-            try
-                fprintf('= %s\n',val.tostring);
-            catch
-                fprintf('= ...\n');
+            if ~obj.Silent
+                fprintf(sk_tool_padstr(s, 35));
+                        
+                try
+                    fprintf('= %s\n',val.tostring);
+                catch
+                    fprintf('= ...\n');
+                end
             end
             
             obj.CalcProp=[obj.CalcProp {hash}];

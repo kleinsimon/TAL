@@ -5,6 +5,8 @@
 
 %% System Initialization
 
+echo on;
+
 tcsys = sk_tc_system;
 tcsys.Database='TCFE7';
 tcsys.Elements='Fe Cr v si n c mo mn ni';

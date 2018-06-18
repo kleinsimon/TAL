@@ -45,6 +45,7 @@ classdef sk_tc_scheil < handle
         
         function calculate(obj)
             obj.WorkEQ = obj.BaseEQ.Clone;
+            obj.WorkEQ.Calculate;
             if ~isscalar(obj.StartT)
                 obj.StartT = ceil(sk_func_tc_properties.get(obj.BaseEQ, 'tliq') + 3);
             end
@@ -83,9 +84,7 @@ classdef sk_tc_scheil < handle
             end
             
             if obj.DoFDE
-                [a,b,~]=obj.WorkEQ.GetValue('n(*,*)');
-                obj.SolidNames=[a b];
-                obj.Solids = zeros(numel(a),0);
+                error("Not implemented");
             end
             
             obj.ResVars = elmnames';
@@ -260,9 +259,7 @@ classdef sk_tc_scheil < handle
             tmpphinfo = cellfun(@(c)(obj.WorkEQ.GetValue(c)), obj.PhaseParams, 'UniformOutput', false);
             
             if obj.DoFDE && abs(oldmole-obj.SysMole)>1e-16
-                [~,~,ncnt] = obj.WorkEQ.GetValue('n(*,*)');
-                obj.Solids = [obj.Solids ncnt];
-                obj.calcBackDiffusion(thisTemp);
+                error("NotImplemented");
             end
                         
             obj.Results = sk_tool_tableAddRow(obj.Results, [thisTemp, thisTemp-273.15, tmpphinfo, tmpres]);
@@ -274,49 +271,6 @@ classdef sk_tc_scheil < handle
         
         function setNewComposition(obj)
             obj.WorkEQ=obj.LiqState;
-        end
-        
-        function calcBackDiffusion(obj, t)
-            ph = obj.Phases;
-            el = obj.Components;
-            nph = numel(ph);
-            nel = numel(el);
-            
-            %Hier je phase alle N aufsummieren, partielle EQ bilden und
-            %dann paraeq berechnen
-            Nsum = sum(obj.Solids, 2);
-            Peqs = cell(nph, 1);
-            
-            liqid = 0;
-            
-            for i=1:nph
-                if strcmpi(ph{i}, 'LIQUID')
-                    eq = obj.WorkEQ;
-                else
-                    start = (i-1)*nel+1;
-                    stop = start + nel - 1;
-                    phcnt = Nsum(start:stop);
-                    phn = sum(phcnt);
-                    if phn == 0
-                        continue;
-                    end
-                    eq = sk_tc_equilibrium(obj.WorkEQ.TCSYS);
-                    eq.SetConditionsForComponents(el, phcnt, 'n');
-                    eq.SetCondition('n', phn);
-                    eq.SetCondition('p', obj.SysPressure);
-                    eq.SetCondition('t', t);
-                end
-                Peqs{i} = eq;
-            end
-            
-            nothing = cellfun('isempty', Peqs);
-            
-            Peqs(nothing) = [];
-            ph(nothing) = [];
-            
-            peq = sk_tc_partial_eq(ph, Peqs);
-            paraeq = sk_tc_paraequilibrium(peq);
-            
         end
     end
 end

@@ -17,6 +17,8 @@ classdef sk_solver_minimize_value < sk_solvers
         invert=0;
         %Override Function. Can be a function to handle the result of minfunc 
         overrideFunc;
+        TolX=1e-6;
+        TolFun=1e-10;
     end
     
     properties (Dependent)
@@ -46,9 +48,9 @@ classdef sk_solver_minimize_value < sk_solvers
                 Values=[]; 
             end
             if obj.silent == 1
-                obj.options = optimoptions('fmincon','Display','none','Diagnostics','off','TolX',1e-2,'Algorithm','interior-point','DiffMinChange', 1e-4);
+                obj.options = optimoptions('fmincon','Display','none','Diagnostics','off','TolFun', obj.TolFun, 'TolX',obj.TolX, 'Algorithm','interior-point','DiffMinChange', 1e-4);
             else
-                obj.options = optimoptions('fmincon','Display','final','Diagnostics','off','TolX',1e-2,'Algorithm','interior-point','DiffMinChange', 1e-4);
+                obj.options = optimoptions('fmincon','Display','iter','Diagnostics','off','TolFun', obj.TolFun, 'TolX',obj.TolX,'Algorithm','interior-point','DiffMinChange', 1e-4);
             end
                        
             parm = obj.solvParm.copy();

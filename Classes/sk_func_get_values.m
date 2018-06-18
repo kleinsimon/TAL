@@ -27,11 +27,10 @@ classdef sk_func_get_values < sk_funcs
             if isempty(obj.Queries)
                 error ('no expression set. Set Queries to e.g. "w(c,fcc)"');
             end
-            obj.BaseEq.StartSandbox();
-            obj.BaseEq.SetConditionsForComponents(vars, values);
+            eq = obj.BaseEq.Clone;
+            eq.SetConditionsForComponents(vars, values);
 
-            res = cellfun(@(exp)(obj.BaseEq.GetValue(exp)), obj.Queries);
-            obj.BaseEq.EndSandbox();
+            res = cellfun(@(exp)(eq.GetValue(exp)), obj.Queries);
         end
     end
     

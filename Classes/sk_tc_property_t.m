@@ -19,13 +19,22 @@ classdef sk_tc_property_t < sk_tc_property
     
     methods 
         function obj=sk_tc_property_t(temp)
-            t = sk_tc_prop_result.getByType(temp, 1, {@isnumeric});
-            if isempty(t)
-                error('no temperature submitted');
+            if isempty(temp)
+                return;
             end
-            obj.Temp = t{1};
+            
+            t = sk_tc_prop_result.getByType(temp, 1, {@isnumeric});
+            if ~isempty(t)
+                obj.Temp = t{1};
+            elseif (isnumeric(temp{1}))
+                obj.Temp=sk_tc_prop_result('Temperature', 1, temp{1}, 'K');
+            end
         end
-        function res = calculate(obj, ~, ~, ~)
+        function res = calculate(obj, ~, eq, ~)
+            
+            if isempty(obj.Temp)
+                obj.Temp=sk_tc_prop_result('Temperature', 1, eq.GetValue('t'), 'K');
+            end
             
             if strcmpi(obj.Temp.unit, 'C')
                 obj.Temp = obj.Temp.Clone;

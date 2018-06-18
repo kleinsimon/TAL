@@ -43,4 +43,4 @@ mapper.Ranges={...
 
 mapper.doMapping;
 
-res=mapper.getResult();
+res=mapper.getResult()

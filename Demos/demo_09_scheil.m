@@ -1,5 +1,5 @@
 tcsys = sk_tc_system;
-tcsys.Database='TCFE7';
+tcsys.Database='TCFE9';
 tcsys.Elements='Fe c cr si v mn';
 tcsys.RejPhases='*';
 tcsys.ResPhases='fcc bcc cem liquid';
@@ -16,9 +16,11 @@ BaseEq.SetCondition('w(v)',    0.085);
 BaseEq.SetCondition('w(mn)',   0.003);
 
 Eq1 = BaseEq.Clone;
-scheil=sk_tc_scheil(Eq1);
-scheil.FDE={'C'};
-scheil.calculate;
 
+Eq1.Calculate;
+
+scheil=sk_tc_scheil(Eq1);
+scheil.StartT=1651;
+scheil.calculate;
 scheil.drawScheil;
 

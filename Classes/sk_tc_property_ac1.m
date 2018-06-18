@@ -1,12 +1,11 @@
 classdef sk_tc_property_ac1 < sk_tc_property
 % sk_func_calc_ac1: Child of sk_funcs. Evaluates the ac1 temperature of
-% steels (The temperature, where austenite begins to form). Not 100%
-% stable. Variate Content and StartT!
+% steels. Instable, if Delta-Ferrite exsists
 %
 %   Result:     AC1 in K
     properties
-        Content = 1e-12; %Amount of austenite to exist. Default: 1e-12
-        StartT = 600;    %Temperature to calculate first. 
+        Tol = 1e-8;
+        Verbose=1;
     end
     
     properties (GetAccess=public,SetAccess=private)
@@ -27,13 +26,14 @@ classdef sk_tc_property_ac1 < sk_tc_property
                 eq.Flush;
                 
                 eq.SetMin(0);                
+                eq.KeepState=1;
                 eq.SetCondition('t',fccT);
                 eq.Calculate;
-                eq.SetCondition('t',obj.StartT);
+                eq.SetCondition('t',600);
                 eq.Calculate;
 
                 eq.DeleteCondition('T');
-                eq.SetPhaseStatus(fccName,'fixed',obj.Content);
+                eq.SetPhaseStatus(fccName,'fixed',1e-12);
                 ac1 = eq.GetValue('T');
 
                 res = sk_tc_prop_result(obj.zNames, 1, ac1, 'K');

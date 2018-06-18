@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Demonstrates the usage of a minimizer as a stepping target to the mapper
-% Here, for a range of Cr-Contents the C-Content with the lowest Delta-G is
+% Here, for a range of Cr-Contents the C-Content with the highest Delta-G is
 % searched
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 

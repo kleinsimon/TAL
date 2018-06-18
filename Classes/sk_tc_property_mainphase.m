@@ -21,6 +21,7 @@ classdef sk_tc_property_mainphase < sk_tc_property
         end
         function res = calculate(obj, caller, eq, deps)
             try
+                eq.Calculate;
                 name = eq.GetMainPhase(obj.PhaseComparer,obj.AllowedPhases);
             catch
                 res = nan;
