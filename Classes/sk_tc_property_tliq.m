@@ -7,15 +7,16 @@ classdef sk_tc_property_tliq < sk_tc_property
 %               raised until MaxT (1250K). 
 %   Result:     AC1 in K
     properties
-        Amount = 1;
-        LiquidName = 'Liq';
+        Amount = 1-1e-6;
+        MinT = 1100+273.15;
+        MaxT = 2000+273.15;
         Verbose=1;
     end
     
     properties (GetAccess=public,SetAccess=private)
         zNames={'Tliq'};
         %Names of properties which have to be calculated first
-        DependsOn={}; 
+        DependsOn={'liquidName'}; 
         SetBefore=1;
         ScheilObj;
     end
@@ -31,17 +32,34 @@ classdef sk_tc_property_tliq < sk_tc_property
                 iv = s.getSolidificationInterval;
                 tliq = iv.TLiq;
             else
-                n=eq.GetValue('n');
+                sN=deps{1}.value;
+                problem=struct;
+                problem.x0=(obj.MinT+obj.MaxT)/2;
+                problem.lb=obj.MinT;
+                problem.ub=obj.MaxT;
+                problem.solver='fminsearch';
+                problem.objective = @(t)(obj.CntOrT(t, eq, sN, obj.Amount));
+                problem.options = optimset;
+                problem.options.Display="none";
+                problem.options.TolX = 0.5;
+                problem.options.TolFun = 0.1;
 
-                eq.SetCondition('t', 5000);
-                eq.Calculate;
-
-                eq.DeleteCondition('T');
-                eq.SetPhaseStatus(obj.LiquidName,'fixed',n*obj.Amount);
-                eq.Calculate;
-                tliq = eq.GetValue('T');
+                tliq = round(fminsearch(problem),1);
             end
             res = sk_tc_prop_result(obj.zNames, 1, tliq, 'K');
+        end
+        
+        function r=CntOrT(~, t, eq, p, tol)
+
+            eq.SetCondition('T', t);
+
+            vpv = eq.GetValue('vpv(%s)', p);
+
+            if abs(vpv)>=tol
+                r=t/100;
+            else
+                r=100/vpv;
+            end
         end
     end
 end
