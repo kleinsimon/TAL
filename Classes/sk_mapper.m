@@ -3,7 +3,7 @@ classdef sk_mapper<handle
     %mappingHelper Maps data derived from function over a given input range
     %   Components: Cellarray of TC-Name of Variables to be mapped at x axis (eg. {T, w(c)})
     %   Ranges:     Cellarray of Vectors for Range per axis {[Start, End, Number of Steps],..}
-    %   zSolver:    Solver to call at each point (Superclass tc_functions)
+    %   zSolver:    Solver to call at each point (Superclass sk_solvers)
     %   Mode:       0=map in all n dimensions; 
     %               1=map all variables 2-D against the first variable;
     %               2=map all variables in all combinations, n choose 2
@@ -19,10 +19,10 @@ classdef sk_mapper<handle
     end
     
     properties
-        Components={};
-        Ranges={};
-        zSolver;
-        Mode=0;         
+        Components={};  %Variables to variate. eg 'w(c)' etc. Cellarray.
+        Ranges={}; %Cellarray of 1x3 Arrays. Each array denotes start, end and step {[1 10 1], [1 20 1]}. One Range for each component is needed.
+        zSolver; %sk_solvers which to call on every iteration point
+        Mode=0;  %0=map in all n dimensions;  1=map all variables 2-D against the first variable; 2=map all variables in all combinations, n choose 2; 3=step all variables individually       
     end
     
     methods

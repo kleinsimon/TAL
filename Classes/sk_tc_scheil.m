@@ -1,24 +1,22 @@
 classdef sk_tc_scheil < handle
-    %UNTITLED Summary of this class goes here
-    %   Detailed explanation goes here
+    %Scheil-Gulliver implementation in Matlab. 
     
     properties
-        Step=1;
-        Parameter='w';
-        Results;
-        PhaseInfo;
-        GetContents=true;
-        Tolerance=1e-12;
-        StopTolerance=1e-2;
-        FDE={};
-        GlobalMinimization=0;
-        BaseEQ;
-        Silent=0;
-        LiquidPhase='LIQUID'
-        StartT=[];
+        Step=1;     %Temperature step to take while cooling... Default 1K
+        Parameter='w';  %Parameter to log for each component. Default "w"
+        Results;    %Contains the Resulting Table after the simulation
+        GetContents=true;   %Log the composition of solidified mater
+        Tolerance=1e-12;    %Tolerance for deminishing phases
+        StopTolerance=1e-2; %Amount of liquid at which to stop. Default 1%
+        FDE={};             %Fast diffusers... not implemented
+        BaseEQ;             %sk_tc_equilibrium on which to operate
+        Silent=0;           %Surpress output
+        LiquidPhase='LIQUID'%Name of the liquid phase. Default LIQUID
+        StartT=[];          %Starting Temperature. Default TLIQ+3
     end
     
     properties (Access=private)
+        PhaseInfo;
         WorkEQ;
         Components;
         NextT;
@@ -36,14 +34,23 @@ classdef sk_tc_scheil < handle
         DoFDE=0;
         Solids;
         SolidNames;
+        GlobalMinimization=1;
     end
     
     methods
         function obj = sk_tc_scheil(baseeq)
+            %Constructor. Takes a sk_tc_equilibrium as argument.
+            
             obj.BaseEQ = baseeq;
         end
         
         function calculate(obj)
+            %Do the scheil simulation. 
+            
+            if ~isa(obj.BaseEQ, 'sk_tc_equilibrium')
+                error("need to set BaseEQ");
+            end
+            
             obj.WorkEQ = obj.BaseEQ.Clone;
             obj.WorkEQ.Calculate;
             if ~isscalar(obj.StartT)
@@ -124,6 +131,8 @@ classdef sk_tc_scheil < handle
         end
         
         function drawScheil(obj)
+            %Plot scheil diagram, amount of solid over temperature.
+            
             phI=obj.getPhaseInfo;
             phN=phI.Phase;
             phS=phI.PrecTemp;
@@ -149,6 +158,9 @@ classdef sk_tc_scheil < handle
         end
                 
         function ResTab = getSegregationFactors(obj)
+            %Return segregation factors. Run calculate first and enable
+            %GetContents
+            
             if ~obj.GetContents
                error ('need to be calculated with "GetContents=true"'); 
             end
@@ -171,8 +183,11 @@ classdef sk_tc_scheil < handle
         end
         
         function [liqstate, solstate] = getStates(obj)
-            liqstate = sk_tc_state(obj.WorkEQ.TCSYS);
-            solstate = sk_tc_state(obj.WorkEQ.TCSYS);
+            %[liqstate, solstate] = getStates()
+            %Get the composition of first and last solid as a state
+            
+            liqstate = sk_tc_equilibrium(obj.WorkEQ.TCSYS);
+            solstate = sk_tc_equilibrium(obj.WorkEQ.TCSYS);
             
             syscond = obj.WorkEQ.GetSystemConditions;
             
@@ -192,6 +207,8 @@ classdef sk_tc_scheil < handle
         end
         
         function Res = getSolidificationInterval(obj)
+            %Return the temperature interval of solidification
+            
             r=struct;
             tmp = table2array( obj.Results(:,'t'));
             tmp=tmp(tmp~=0);
@@ -202,40 +219,8 @@ classdef sk_tc_scheil < handle
             r.Interval=r.TLiq-r.TSol;
             Res = r;
         end
-               
-        function Res = getPhaseInfo(obj)
-            temp=table2array(obj.Results(:,[1 2]));
-            li=[];
-            pi=struct;
-            
-            for i=1:length(obj.Phases)
-                ph = obj.Phases{i};
-
-                cnt=table2array(obj.Results(:,matlab.lang.makeValidName(obj.PhaseParams{i})));
-                
-                fi=find(cnt>0,1,'first');
-                
-                if strcmpi(ph, obj.LiquidPhase) || max(cnt)==0
-                    li(end+1)=i;
-                end
-                
-                pi(i).Phase=ph;
-                pi(i).MaxContent=max(cnt);
-                pi(i).PrecTemp=temp(fi,1);
-                pi(i).PrecTempC=temp(fi,2);
-            end
-            
-            pi(li)=[];
-            obj.PhaseInfo=struct2table(pi);
-            obj.PhaseInfo=sortrows(obj.PhaseInfo, {'PrecTemp'},'descend');
-            Res=obj.PhaseInfo;
-        end
-        
-        function r = uint8(~)
-            r = 0;
-        end
     end
-    
+                   
     methods (Access=private)
         function iterate(obj, thisTemp)
             if ~obj.Silent
@@ -271,6 +256,40 @@ classdef sk_tc_scheil < handle
         
         function setNewComposition(obj)
             obj.WorkEQ=obj.LiqState;
+        end
+        
+        function Res = getPhaseInfo(obj)
+            %Get phase information.
+            
+            temp=table2array(obj.Results(:,[1 2]));
+            li=[];
+            pi=struct;
+            
+            for i=1:length(obj.Phases)
+                ph = obj.Phases{i};
+
+                cnt=table2array(obj.Results(:,matlab.lang.makeValidName(obj.PhaseParams{i})));
+                
+                fi=find(cnt>0,1,'first');
+                
+                if strcmpi(ph, obj.LiquidPhase) || max(cnt)==0
+                    li(end+1)=i;
+                end
+                
+                pi(i).Phase=ph;
+                pi(i).MaxContent=max(cnt);
+                pi(i).PrecTemp=temp(fi,1);
+                pi(i).PrecTempC=temp(fi,2);
+            end
+            
+            pi(li)=[];
+            obj.PhaseInfo=struct2table(pi);
+            obj.PhaseInfo=sortrows(obj.PhaseInfo, {'PrecTemp'},'descend');
+            Res=obj.PhaseInfo;
+        end
+        
+        function r = uint8(~)
+            r = 0;
         end
     end
 end
