@@ -3,14 +3,16 @@ classdef sk_mapper<handle
     %mappingHelper Maps data derived from function over a given input range
     %   Components: Cellarray of TC-Name of Variables to be mapped at x axis (eg. {T, w(c)})
     %   Ranges:     Cellarray of Vectors for Range per axis {[Start, End, Number of Steps],..}
-    %   zSolver:    Solver to call at each point (Superclass sk_solvers)
+    %   zFunction:    Solver to call at each point (Superclass sk_solvers)
     %   Mode:       0=map in all n dimensions; 
     %               1=map all variables 2-D against the first variable;
     %               2=map all variables in all combinations, n choose 2
     %               3=step all variables individually
     
     properties(Access = private)
-        zFunction
+        zFunction   %Solver to call at each point (Superclass sk_solvers)
+        skipWatchdog %sk_funcs to use to evaluate a stop condition
+        skipCheckFun %Function to check the result of the watchdog to stop the current iteration
     end
     
     properties(SetAccess = private, GetAccess = public)
@@ -183,6 +185,10 @@ classdef sk_mapper<handle
             maxlen = max(lengths);
             progDisp=sk_tool_progress_display(all);
             %[~, oldCond] = tc_list_conditions;
+            wd =false;
+            if isa(obj.skipWatchdog, 'sk_funcs')
+                wd=true;
+            end
             
             rtmp=cell(maxlen,0);
             
