@@ -24,15 +24,16 @@ classdef sk_tc_property_a4 < sk_tc_property
 
             try
                 cf = sk_conditionFinder;
-                cf.xmin=1300+273;
-                cf.xmax=deltaT;
-                cf.tolerance=0.5;
-                cf.orderRange=2;
-                cf.directionDown=true;
+                cf.Xmin=1300+273;
+                cf.Xmax=deltaT;
+                cf.Tolerance=0.5;
+                cf.OrderRange=2;
+                cf.OrderStep=0.5;
+                cf.DirectionDown=true;
                 
                 f = @(xx)(obj.CntCheck(xx, eq, deltaName, obj.Tolerance));
 
-                cf.func=f;
+                cf.Func=f;
                 x=cf.calculate();
                 
                 res = sk_tc_prop_result(obj.zNames, 1, x, 'K');

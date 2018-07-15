@@ -24,17 +24,19 @@ classdef sk_tc_property_ac3 < sk_tc_property
            
             try 
                 cf = sk_conditionFinder;
-                cf.xmin=sT;
-                cf.xmax=1200+273;
-                cf.tolerance=0.5;
-                cf.orderRange=3;
-                cf.directionDown=false;
+                cf.Xmin=sT;
+                cf.Xmax=1200+273;
+                cf.Tolerance=0.5;
+                cf.OrderRange=3;
+                cf.OrderStep=0.5;
+                cf.Verbose=1;
+                cf.DirectionDown=false;
                 
                 cem = any(strcmpi(eq.GetPhases, 'CEMENTITE'));
                 
                 f = @(xx)(obj.CntCheck(xx, eq, sN, obj.Tolerance, cem));
 
-                cf.func=f;
+                cf.Func=f;
                 x=cf.calculate();
 
                 res = sk_tc_prop_result(obj.zNames, 1, x, 'K');

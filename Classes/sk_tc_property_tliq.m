@@ -7,9 +7,9 @@ classdef sk_tc_property_tliq < sk_tc_property
 %               raised until MaxT (1250K). 
 %   Result:     AC1 in K
     properties
-        Amount = 1-1e-6;
-        MinT = 1100+273.15;
-        MaxT = 2000+273.15;
+        Tolerance = 1e-6;
+        MinT = 500+273.15;
+        MaxT = 1600+273.15;
         Verbose=1;
     end
     
@@ -26,40 +26,35 @@ classdef sk_tc_property_tliq < sk_tc_property
             obj.ScheilObj = sk_tc_prop_result.getByType(varargin, 10);
         end
         function res = calculate(obj, ~, eq, deps)
+            sN = deps{1}.value;
             if ~isempty(obj.ScheilObj)
                 s=obj.ScheilObj{1}.value{1};
                 
                 iv = s.getSolidificationInterval;
                 tliq = iv.TLiq;
             else
-                sN=deps{1}.value;
-                problem=struct;
-                problem.x0=(obj.MinT+obj.MaxT)/2;
-                problem.lb=obj.MinT;
-                problem.ub=obj.MaxT;
-                problem.solver='fminsearch';
-                problem.objective = @(t)(obj.CntOrT(t, eq, sN, obj.Amount));
-                problem.options = optimset;
-                problem.options.Display="none";
-                problem.options.TolX = 0.5;
-                problem.options.TolFun = 0.1;
+                cf = sk_conditionFinder;
+                cf.Xmin=obj.MinT;
+                cf.Xmax=obj.MaxT;
+                cf.Tolerance=0.5;
+                cf.OrderRange=3;
+                cf.OrderStep=0.75;
+                cf.Verbose=0;
+                cf.DirectionDown=true;
+              
+                f = @(xx)(obj.CntCheck(xx, eq, sN, obj.Tolerance));
 
-                tliq = round(fminsearch(problem),1);
+                cf.Func=f;
+                tliq=cf.calculate();
             end
             res = sk_tc_prop_result(obj.zNames, 1, tliq, 'K');
         end
         
-        function r=CntOrT(~, t, eq, p, tol)
-
+        function r=CntCheck(~, t, eq, p, tol)
+            %fprintf('%g\n', t);
             eq.SetCondition('T', t);
-
             vpv = eq.GetValue('vpv(%s)', p);
-
-            if abs(vpv)>=tol
-                r=t/100;
-            else
-                r=100/vpv;
-            end
+            r=abs(vpv)<1-tol;
         end
     end
 end

@@ -7,9 +7,9 @@ classdef sk_tc_property_tsol < sk_tc_property
 %               raised until MaxT (1250K). 
 %   Result:     AC1 in K
     properties
-        Amount = 1e-6;
+        Tolerance = 1e-6;
         MinT = 900+273.15;
-        MaxT = 2000+273.15;
+        MaxT = 1550+273.15;
         Verbose=1;
     end
     
@@ -33,33 +33,30 @@ classdef sk_tc_property_tsol < sk_tc_property
                 tsol = iv.TSol;
             else
                 sN=deps{1}.value;
-                problem=struct;
-                problem.x0=(obj.MinT+obj.MaxT)/2;
-                problem.lb=obj.MinT;
-                problem.ub=obj.MaxT;
-                problem.solver='fminsearch';
-                problem.objective = @(t)(obj.CntOrT(t, eq, sN, obj.Amount));
-                problem.options = optimset;
-                problem.options.Display="none";
-                problem.options.TolX = 0.5;
-                problem.options.TolFun = 0.1;
+                cf = sk_conditionFinder;
+                cf.Xmin=obj.MinT;
+                cf.Xmax=obj.MaxT;
+                cf.Tolerance=0.5;
+                cf.OrderRange=3;
+                cf.OrderStep=0.75;
+                cf.Verbose=0;
+                cf.DirectionDown=true;
+              
+                f = @(xx)(obj.CntCheck(xx, eq, sN, obj.Tolerance));
 
-                tsol = round(fminsearch(problem),1);
+                cf.Func=f;
+                tsol=cf.calculate();
             end
             res = sk_tc_prop_result(obj.zNames, 1, tsol, 'K');
         end
         
-        function r=CntOrT(~, t, eq, p, tol)
+        function r=CntCheck(~, t, eq, p, tol)
 
             eq.SetCondition('T', t);
 
             vpv = eq.GetValue('vpv(%s)', p);
 
-            if abs(vpv)<=tol
-                r=100/t;
-            else
-                r=vpv*100;
-            end
+            r=vpv<=tol;
         end
     end
 end
