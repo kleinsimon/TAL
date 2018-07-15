@@ -3,7 +3,7 @@ classdef sk_tc_plotter
     end
     
     methods(Static)
-        function resT = PlotPhaseContents(oeq, varargin)
+        function varargout = PlotPhaseContents(oeq, varargin)
             %PlotPhaseContents(EQ, startT=600°C, endT=1500°C, steps=40, modifier=vpv)
             
             [startT, endT, nstep, mod] = sk_tool_parse_varargin(varargin, 873.15, [], 40, 'vpv');
@@ -15,6 +15,7 @@ classdef sk_tc_plotter
             end
             
             fun = sk_func_tc_properties(eq);
+            fun.Silent=1;
             fun.Properties={'phase_content'};
             
             solver = sk_solver_eval_func;
@@ -30,6 +31,8 @@ classdef sk_tc_plotter
             res = cell2mat(mapper.Result);
             x=res(:,1) - 273.15;
             res(:,1) = [];
+            res = res*100;
+            %res(res==0) = nan;
             
             empty = sum(res,1) < 1e-8;
             
@@ -47,7 +50,11 @@ classdef sk_tc_plotter
             hold off;
             
             resT = array2table([x,res]);
-            resT.Properties.VariableNames = ['T', names];
+            resT.Properties.VariableNames = ['T',  matlab.lang.makeValidName(names)'];
+            
+            if nargout == 1
+                varargout{1}=resT;
+            end
         end        
     end    
 end
