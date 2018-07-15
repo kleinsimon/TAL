@@ -89,10 +89,11 @@ classdef sk_tc_system<handle
             isinit=isa(obj.InitialEq, 'sk_tc_equilibrium');
         end
         
-        function ph = GetPhases(~)
+        function ph = GetPhases(obj)
             %get the potentially stable phases of the system
             
-            [~,ph]=tc_list_phase;
+            %[~,ph]=tc_list_phase;
+            ph = obj.Ph;
         end
         
         function SetFunction(obj, varargin)
